@@ -1,10 +1,12 @@
 ﻿using BotTest.Data;
 using BotTest.Models;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BotTest.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ChatController : ControllerBase
@@ -17,7 +19,7 @@ namespace BotTest.Controllers
         }
 
         [HttpPost("send")]
-        public ActionResult<ChatResponse> SendMessage([FromBody] ChatRequest request)
+        public async Task< ActionResult<ChatResponse>> SendMessage([FromBody] ChatRequest request)
         {
             string reply;
             if (string.IsNullOrWhiteSpace(request.Message))
@@ -42,13 +44,17 @@ namespace BotTest.Controllers
                 BotReply = reply
             };
             _context.ChatHistories.Add(history);
-            _context.SaveChanges();
+            _context.SaveChangesAsync();
             return Ok(new ChatResponse { Reply = reply });
         }
         [HttpGet("history")]
-        public ActionResult<IEnumerable<ChatHistory>> GetHistory()
+        public async Task<ActionResult<IEnumerable<ChatHistory>>> GetHistory()
         {
-            return Ok(_context.ChatHistories.OrderByDescending(x=>x.CreatedAt).ToList());
+            var history = await _context.ChatHistories
+                                        .OrderByDescending(x => x.CreatedAt)
+                                        .ToListAsync();
+            return Ok(history);
         }
+
     }
 }
